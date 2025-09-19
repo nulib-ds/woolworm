@@ -3,7 +3,7 @@
 Hello Northwestern Digitization team (and anyone else who may be following along), welcome to woolworm, your new (hopefully) one-stop shop for digitization.
 I have attempted to abstract as much of the intricacies of image transformation in python. At least to the best of my ability.
 While we are working on this grant, I will be working on build automation and a CLI for you all so that it can be even easier to use.
-
+The point of this repo is in case I die, it can be developed and such.
 Here is my current feature list, where I am open to suggestions or requests, because I like this sort of thing:
 
 - [ ] API
