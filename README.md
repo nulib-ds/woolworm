@@ -1,6 +1,6 @@
 # woolworm (Pre-Alpha State)
 
-Hello Northwestern Digitization team, welcome to woolworm, your new (hopefully) one-stop shop for digitization.
+Hello Northwestern Digitization team (and anyone else who may be following along), welcome to woolworm, your new (hopefully) one-stop shop for digitization.
 I have attempted to abstract as much of the intricacies of image transformation in python. At least to the best of my ability.
 While we are working on this grant, I will be working on build automation and a CLI for you all so that it can be even easier to use.
 
@@ -60,4 +60,5 @@ img = p.binarize_or_gray(img)
 
 p.save_image(img)
 ```
+
 # woolworm
