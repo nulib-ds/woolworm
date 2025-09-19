@@ -1,11 +1,3 @@
-# TODO:
-# This needs more extensive documentation
-# I also think that we should not have so many arguments.
-# Perhaps we do something where each step is a method call. So that the user does:
-# woolworm.binarize.
-# woolworm.remove_background.
-# woolworm.ocr(method arguments about HF, Ollama, Tesseract, etc. can go here)
-# That way we can tune hyperparameters more easily, and then wrap each step in a CLI at the end.
 import base64
 from datetime import datetime
 import io
