@@ -1,0 +1,33 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+test-images
+weights
+dotsocr
+experiment.py
+# Virtual environments
+.venv
+*.yml
+model
+notebooks
+apollo-missions
+output_figures
+tests
+Modelfile
+*.err
+*.out
+*.def
+*.sif
+*.log
+*.sh
+outputs
+*.png
+*.jpg
+*.jp2
+*.tiff
+hf-apollo
+.DS_Store
