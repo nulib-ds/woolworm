@@ -46,15 +46,25 @@ class Woolworm:
         self.benchmark = benchmark
 
     @staticmethod
-    def ocr(img, method="tesseract", model=""):
-        options = ["huggingface", "tesseract", "ollama", "marker"]
+    def ocr(image_path: str, method: str = "tesseract", model: str = ""):
+        """Run OCR (and optionally LLM) models on an image and returns a string of text.
+
+        Features:
+        - Using the method and model, customize Ollama or Marker Models.
+
+        Args:
+            image_path (str): Relative or absolute path to image
+        Returns:
+            str: Detected text in the image.
+        """
+        options = ["tesseract", "ollama", "marker"]
         if method.lower() not in options:
             logger.critical(
                 f"{method} not found. Choose from 'ollama', 'tesseract' or 'huggingface'"
             )
             raise ValueError(f"Invalid OCR method: {method}")
         if method.lower() == "tesseract":
-            return pytesseract.image_to_string(img)
+            return pytesseract.image_to_string(image_path)
         elif method.lower() == "marker":
             config = {"output_format": "html"}
             config_parser = ConfigParser(config)
@@ -62,7 +72,7 @@ class Woolworm:
                 artifact_dict=create_model_dict(),
                 config=config_parser.generate_config_dict(),
             )
-            rendered = converter(img)
+            rendered = converter(image_path)
             text, _, images = text_from_rendered(rendered)
             return text
         elif method.lower() == "ollama":
@@ -86,7 +96,7 @@ class Woolworm:
                     {
                         "role": "user",
                         "content": prompt,
-                        "images": [img],
+                        "images": [image_path],
                     },
                 ],
             )
@@ -183,6 +193,18 @@ class Woolworm:
 
     @staticmethod
     def binarize_or_gray(img, text_threshold=0.5, entropy_threshold=4.0, debug=False):
+        """Detects if an image should be binarized or not, and if so, does that.
+
+        Features:
+        - Uses component counts to determine if the content of a page is a diagram or mostly text.
+        - If predicted text, returns binarized.
+        - If predicted diagram, returns copy of input image.
+
+        Args:
+            img (np.ndarray): Input OpenCV image (BGR or grayscale).
+        Returns:
+            np.ndarray: Deskewed OpenCV image.
+        """
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
         # Denoise
