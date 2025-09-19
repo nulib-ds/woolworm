@@ -32,15 +32,15 @@ You will want to familiarize yourself with the absolute basics of calling object
 If you are extremely impatient, you can get started with two lines of code
 
 ```python
-from woolworm import woolworm
+from woolworm import Woolworm
 
-woolworm.Pipelines.process_image("inputfilename.jpg", "outputfilename.jpg")
+Woolworm.Pipelines.process_image("inputfilename.jpg", "outputfilename.jpg")
 ```
 
 In the backend, it looks like this. You can find this code in the `cookbook` directory
 
 ```python
-from woolworm import woolworm
+from woolworm import Woolworm
 
 p = woolworm()  # Creates the "woolworm" class
 
@@ -60,5 +60,3 @@ img = p.binarize_or_gray(img)
 
 p.save_image(img)
 ```
-
-# woolworm
