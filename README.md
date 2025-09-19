@@ -67,3 +67,6 @@ img = p.binarize_or_gray(img)
 
 p.save_image(img)
 ```
+
+Sample output:
+![Sample Output in a nicely formatted table](assets/output_sample.png)
