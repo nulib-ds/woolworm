@@ -6,6 +6,8 @@ While we are working on this grant, I will be working on build automation and a 
 The point of this repo is in case I die, it can be developed and such.
 Here is my current feature list, where I am open to suggestions or requests, because I like this sort of thing:
 
+## Road to v0.1.0
+
 - [ ] API
   - [x] Load image
   - [x] Deskew
@@ -14,14 +16,19 @@ Here is my current feature list, where I am open to suggestions or requests, bec
   - [x] Standalone Ollama LLM OCR
   - [x] Marker Document Understanding LLM OCR
   - [ ] HathiTrust (currently experimental in a standalone script)
+
+## Road to v1.0.0
+
 - [ ] Pipelines
   - [x] Image processing
-  - [ ] OCR
-  - [ ] HathiTrust
+  - [ ] OCR (do we need a pipeline for this? It is a single function)
+  - [ ] HathiTrust (Migrated Brendan's Ruby script to python)
   - [ ] ???
   - [ ] Profit
 - [ ] CLI (To be done later)
 - [ ] Figure out how the hell I publish a python package
+
+Automation, supercomputing interfacing, remote directories will be handled in a different repository. This is to track one step of the data science process: data cleaning.
 
 ## Prerequisites
 
