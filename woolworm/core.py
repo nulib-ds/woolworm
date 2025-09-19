@@ -1,9 +1,4 @@
-import base64
-from datetime import datetime
-import io
-import logging
-from pathlib import Path
-from typing import List, Tuple
+from typing import Tuple
 
 import cv2
 from loguru import logger
@@ -13,11 +8,9 @@ from marker.models import create_model_dict
 from marker.output import text_from_rendered
 import numpy as np
 import ollama
-from PIL import Image
 import pytesseract
 from scipy.stats import entropy
 from skimage.measure import shannon_entropy
-from tqdm import tqdm
 
 
 class Woolworm:
@@ -156,7 +149,7 @@ class Woolworm:
             scores = []
             for s in shift_range:
                 M = cv2.getRotationMatrix2D(
-                    (gray.shape[1] // 2, gray.shape[0] // 2), s, 1
+                    (gray.shape[1] // 2, gray.shape[0] // 2), float(s), 1
                 )
                 rotated = cv2.warpAffine(
                     gray_inv,
@@ -176,7 +169,7 @@ class Woolworm:
         # --- Rotate original image if needed ---
         (h, w) = img.shape[:2]
         center = (w // 2, h // 2)
-        M = cv2.getRotationMatrix2D(center, best_angle, 1.0)
+        M = cv2.getRotationMatrix2D(center, float(best_angle), 1.0)
         rotated = cv2.warpAffine(
             img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE
         )
@@ -263,11 +256,12 @@ class Woolworm:
         # Create mask required by floodFill (2 pixels larger)
         h, w = out.shape[:2]
         mask = np.zeros((h + 2, w + 2), np.uint8)
-
+        seeds: list[Tuple[int, int]] = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
         # Flood fill from each corner (in case some sides aren't connected)
-        for seed in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]:
+        for seed in seeds:
+            seed: tuple[int, int]
             if out[seed[1], seed[0]] == 0:  # only flood if pixel is black
-                cv2.floodFill(out, mask, seedPoint=seed, newVal=255)
+                cv2.floodFill(out, mask, seedPoint=seed, newVal=(255,))
 
         return out
 
