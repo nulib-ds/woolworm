@@ -42,50 +42,54 @@ class Woolworm:
         Returns:
             str: Detected text in the image.
         """
-        options = ["tesseract", "ollama", "marker"]
-        if method.lower() not in options:
-            logger.critical(
-                f"{method} not found. Choose from 'ollama', 'tesseract' or 'huggingface'"
-            )
-            raise ValueError(f"Invalid OCR method: {method}")
-        if method.lower() == "tesseract":
-            return pytesseract.image_to_string(image_path)
-        elif method.lower() == "marker":
-            config = {"output_format": "html"}
-            config_parser = ConfigParser(config)
-            converter = PdfConverter(
-                artifact_dict=create_model_dict(),
-                config=config_parser.generate_config_dict(),
-            )
-            rendered = converter(image_path)
-            text, _, images = text_from_rendered(rendered)
-            return text
-        elif method.lower() == "ollama":
-            system_prompt = (
-                "You are an OCR extraction assistant. "
-                "Do not add any commentary, explanation, or extra text. "
-                "Only output the exact text found in the image, formatted as requested (markdown tables, footnotes, headers). It is a matter of life or death that you do not repeat text."
-            )
-            prompt = "Extract the text from this image:\n\n"
-            response = ollama.chat(
-                model="gemma3:27b",
-                options={
-                    "seed": 42,
-                    "temperature": 0.35,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "repetition_penalty": 50,
-                },
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {
-                        "role": "user",
-                        "content": prompt,
-                        "images": [image_path],
+        try:
+            options = ["tesseract", "ollama", "marker"]
+            if method.lower() not in options:
+                logger.critical(
+                    f"{method} not found. Choose from 'ollama', 'tesseract' or 'huggingface'"
+                )
+                raise ValueError(f"Invalid OCR method: {method}")
+            if method.lower() == "tesseract":
+                return pytesseract.image_to_string(image_path)
+            elif method.lower() == "marker":
+                config = {"output_format": "html"}
+                config_parser = ConfigParser(config)
+                converter = PdfConverter(
+                    artifact_dict=create_model_dict(),
+                    config=config_parser.generate_config_dict(),
+                )
+                rendered = converter(image_path)
+                text, _, images = text_from_rendered(rendered)
+                return text
+            elif method.lower() == "ollama":
+                system_prompt = (
+                    "You are an OCR extraction assistant. "
+                    "Do not add any commentary, explanation, or extra text. "
+                    "Only output the exact text found in the image, formatted as requested (markdown tables, footnotes, headers). It is a matter of life or death that you do not repeat text."
+                )
+                prompt = "Extract the text from this image:\n\n"
+                response = ollama.chat(
+                    model="gemma3:27b",
+                    options={
+                        "seed": 42,
+                        "temperature": 0.35,
+                        "top_p": 0.95,
+                        "top_k": 40,
+                        "repetition_penalty": 50,
                     },
-                ],
-            )
-            return response["message"]["content"]
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {
+                            "role": "user",
+                            "content": prompt,
+                            "images": [image_path],
+                        },
+                    ],
+                )
+                return response["message"]["content"]
+        except Exception as e:
+            logger.critical(f"Critical error:\n{e}")
+            exit()
 
     @staticmethod
     def deskew_with_hough(img) -> np.ndarray:
@@ -249,9 +253,27 @@ class Woolworm:
 
     @staticmethod
     def show(image):
-        cv2.imshow("woolworm", image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        """Displays an image to the user using `imshow` method.
+
+        Args:
+            image (np.ndarray): An OpenCV image.
+        Returns:
+            bool: Numpy array representation of the image
+
+        Examples:
+            img = Woolworm().load("path/to/image.jpg")
+        """
+
+        assert type(image) is np.ndarray
+        try:
+            cv2.imshow("woolworm", image)  # Display the image
+            cv2.waitKey(0)  # Wait for user keyboard input
+            cv2.destroyAllWindows()  # Destroy window if key is pressed
+            return True  # Return True
+        except Exception as e:
+            logger.critical(
+                f"Critical failure!\n{e}"
+            )  # Log and print execption if try fails.
 
     @staticmethod
     def save_image(image, file_path):
