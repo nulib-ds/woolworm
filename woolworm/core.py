@@ -235,6 +235,16 @@ class Woolworm:
 
     @staticmethod
     def load(image_path):
+        """Loads an arbitrary image from disk.
+
+        Args:
+            image_path (str or pathlike object): Path to image to load.
+        Returns:
+            np.ndarray: Numpy array representation of the image
+
+        Examples:
+            img = Woolworm().load("path/to/image.jpg")
+        """
         return cv2.imread(image_path)
 
     @staticmethod
