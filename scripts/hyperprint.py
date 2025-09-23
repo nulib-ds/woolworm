@@ -11,6 +11,9 @@ def main():
     parser.add_argument(
         "--output_root", default="outputs", help="Root output directory"
     )
+    parser.add_argument(
+        "--output_bucket", default="", help="The S3 Bucket to put processed images in"
+    )
     parser.add_argument("--extra_args", default="", help="Extra args for woolworm")
     args = parser.parse_args()
 
@@ -19,7 +22,7 @@ def main():
 
     os.makedirs(args.output_root, exist_ok=True)
 
-    for name in os.listdir(args.parent_dir):
+    for i, name in enumerate(os.listdir(args.parent_dir)):
         subdir = os.path.join(args.parent_dir, name)
         print(name, subdir)
         if os.path.isdir(subdir):
@@ -42,7 +45,7 @@ def main():
 #SBATCH --gres=gpu:1
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
-#SBATCH --job-name=multi-ollama
+#SBATCH --job-name=Hyperprint-{i:05d}
 #SBATCH --time={slurm_time}
 #SBATCH --mem=16GB
 #SBATCH --output=output-%j.out
@@ -124,7 +127,6 @@ source_helpers () {{
 }}
 export -f source_helpers
 source_helpers
-
 OLLAMA_PORT=$(find_port localhost 7000 11000)
 export OLLAMA_PORT
 echo $OLLAMA_PORT

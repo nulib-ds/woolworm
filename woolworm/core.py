@@ -181,6 +181,33 @@ class Woolworm:
         return rotated
 
     @staticmethod
+    def binarize(img):
+        """Binarizes an image
+
+        Features:
+        - Uses component counts to determine if the content of a page is a diagram or mostly text.
+        - If predicted text, returns binarized.
+        - If predicted diagram, returns copy of input image.
+
+        Args:
+            img (np.ndarray): Input OpenCV image (BGR or grayscale).
+        Returns:
+            np.ndarray: Deskewed OpenCV image.
+        """
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+        # Denoise
+        denoised = cv2.fastNlMeansDenoising(
+            gray, None, h=10, templateWindowSize=7, searchWindowSize=21
+        )
+
+        result = cv2.adaptiveThreshold(
+            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 35, 10
+        )
+
+        return result
+
+    @staticmethod
     def binarize_or_gray(img, text_threshold=0.5, entropy_threshold=4.0, debug=False):
         """Detects if an image should be binarized or not, and if so, does that.
 
@@ -333,7 +360,7 @@ class Woolworm:
         def process_image(input_file_path, output_file_path):
             img = Woolworm.load(input_file_path)
             img = Woolworm.deskew_with_hough(img)
-            img = Woolworm.binarize_or_gray(img)
+            img = Woolworm.remove_borders(img)
             Woolworm.save_image(img, output_file_path)
             return img
 
