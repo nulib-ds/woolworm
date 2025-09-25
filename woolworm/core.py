@@ -1,5 +1,5 @@
 from typing import Tuple
-
+import os
 import cv2
 from loguru import logger
 from marker.config.parser import ConfigParser
@@ -21,6 +21,7 @@ class Woolworm:
         use_hf: bool = False,
         transformer_model: str = "",
         benchmark: bool = False,
+        cuda: bool = True,
     ):
         self.paths = paths or []
         self.images = [path for path in self.paths]
@@ -29,6 +30,7 @@ class Woolworm:
         self.transformer_model = transformer_model
         self.results = None
         self.benchmark = benchmark
+        self.cuda = cuda
 
     @staticmethod
     def ocr(image_path: str, method: str = "tesseract", model: str = ""):
@@ -42,54 +44,56 @@ class Woolworm:
         Returns:
             str: Detected text in the image.
         """
-        try:
-            options = ["tesseract", "ollama", "marker"]
-            if method.lower() not in options:
-                logger.critical(
-                    f"{method} not found. Choose from 'ollama', 'tesseract' or 'huggingface'"
-                )
-                raise ValueError(f"Invalid OCR method: {method}")
-            if method.lower() == "tesseract":
-                return pytesseract.image_to_string(image_path)
-            elif method.lower() == "marker":
-                config = {"output_format": "html"}
-                config_parser = ConfigParser(config)
-                converter = PdfConverter(
-                    artifact_dict=create_model_dict(),
-                    config=config_parser.generate_config_dict(),
-                )
-                rendered = converter(image_path)
-                text, _, images = text_from_rendered(rendered)
-                return text
-            elif method.lower() == "ollama":
-                system_prompt = (
-                    "You are an OCR extraction assistant. "
-                    "Do not add any commentary, explanation, or extra text. "
-                    "Only output the exact text found in the image, formatted as requested (markdown tables, footnotes, headers). It is a matter of life or death that you do not repeat text."
-                )
-                prompt = "Extract the text from this image:\n\n"
-                response = ollama.chat(
-                    model="gemma3:27b",
-                    options={
-                        "seed": 42,
-                        "temperature": 0.35,
-                        "top_p": 0.95,
-                        "top_k": 40,
-                        "repetition_penalty": 50,
+        options = ["tesseract", "ollama", "marker"]
+        if method.lower() not in options:
+            logger.critical(
+                f"{method} not found. Choose from 'ollama', 'tesseract' or 'huggingface'"
+            )
+            raise ValueError(f"Invalid OCR method: {method}")
+        if method.lower() == "tesseract":
+            return pytesseract.image_to_string(image_path)
+        elif method.lower() == "marker":
+            config = {
+                "output_format": "html",
+                "ollama_base_url": "http://127.0.0.1:11434/",
+                "llm_service": "marker.services.ollama.OllamaService",
+                "use_llm": True,
+            }
+            config_parser = ConfigParser(config)
+            converter = PdfConverter(
+                artifact_dict=create_model_dict(),
+                config=config_parser.generate_config_dict(),
+            )
+            rendered = converter(image_path)
+            text, _, images = text_from_rendered(rendered)
+            print(text)
+            return text
+        elif method.lower() == "ollama":
+            system_prompt = (
+                "You are an OCR extraction assistant. "
+                "Do not add any commentary, explanation, or extra text. "
+                "Only output the exact text found in the image, formatted as requested (markdown tables, footnotes, headers). It is a matter of life or death that you do not repeat text."
+            )
+            prompt = "Extract the text from this image:\n\n"
+            response = ollama.chat(
+                model="gemma3:27b",
+                options={
+                    "seed": 42,
+                    "temperature": 0.35,
+                    "top_p": 0.95,
+                    "top_k": 40,
+                    "repetition_penalty": 50,
+                },
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {
+                        "role": "user",
+                        "content": prompt,
+                        "images": [image_path],
                     },
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {
-                            "role": "user",
-                            "content": prompt,
-                            "images": [image_path],
-                        },
-                    ],
-                )
-                return response["message"]["content"]
-        except Exception as e:
-            logger.critical(f"Critical error:\n{e}")
-            exit()
+                ],
+            )
+            return response["message"]["content"]
 
     @staticmethod
     def deskew_with_hough(img) -> np.ndarray:
@@ -181,33 +185,6 @@ class Woolworm:
         return rotated
 
     @staticmethod
-    def binarize(img):
-        """Binarizes an image
-
-        Features:
-        - Uses component counts to determine if the content of a page is a diagram or mostly text.
-        - If predicted text, returns binarized.
-        - If predicted diagram, returns copy of input image.
-
-        Args:
-            img (np.ndarray): Input OpenCV image (BGR or grayscale).
-        Returns:
-            np.ndarray: Deskewed OpenCV image.
-        """
-        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
-        # Denoise
-        denoised = cv2.fastNlMeansDenoising(
-            gray, None, h=10, templateWindowSize=7, searchWindowSize=21
-        )
-
-        result = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 35, 10
-        )
-
-        return result
-
-    @staticmethod
     def binarize_or_gray(img, text_threshold=0.5, entropy_threshold=4.0, debug=False):
         """Detects if an image should be binarized or not, and if so, does that.
 
@@ -265,42 +242,40 @@ class Woolworm:
         return result
 
     @staticmethod
-    def load(image_path):
-        """Loads an arbitrary image from disk.
-
-        Args:
-            image_path (str or pathlike object): Path to image to load.
-        Returns:
-            np.ndarray: Numpy array representation of the image
-
-        Examples:
-            img = Woolworm().load("path/to/image.jpg")
+    def load(path, convert_if_jp2=True, out_format=".jpg", quality=90, cuda=False):
         """
-        return cv2.imread(image_path)
+        Load an image as a numpy array. If it's a JP2 file, optionally re-encode
+        to a smaller format in memory (no intermediate files).
+        """
+        if cuda is True:
+            logger.info("CUDA is enabled for this image.")
+            image = cv2.imread(path, cv2.IMREAD_COLOR)
+            return "CUDA Not Implemented"
+        ext = os.path.splitext(path)[1].lower()
+
+        img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            raise ValueError(f"Failed to load image: {path}")
+
+        if ext == ".jp2" and convert_if_jp2:
+            # Encode to chosen format in memory
+            encode_param = []
+            if out_format == ".jpg":
+                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+            success, encoded = cv2.imencode(out_format, img, encode_param)
+            if not success:
+                raise ValueError(f"Failed to encode JP2 to {out_format} in memory")
+
+            # Decode back into numpy array (smaller size now)
+            img = cv2.imdecode(encoded, cv2.IMREAD_COLOR)
+
+        return img
 
     @staticmethod
     def show(image):
-        """Displays an image to the user using `imshow` method.
-
-        Args:
-            image (np.ndarray): An OpenCV image.
-        Returns:
-            bool: Numpy array representation of the image
-
-        Examples:
-            img = Woolworm().load("path/to/image.jpg")
-        """
-
-        assert type(image) is np.ndarray
-        try:
-            cv2.imshow("woolworm", image)  # Display the image
-            cv2.waitKey(0)  # Wait for user keyboard input
-            cv2.destroyAllWindows()  # Destroy window if key is pressed
-            return True  # Return True
-        except Exception as e:
-            logger.critical(
-                f"Critical failure!\n{e}"
-            )  # Log and print execption if try fails.
+        cv2.imshow("woolworm", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     @staticmethod
     def save_image(image, file_path):
@@ -360,7 +335,7 @@ class Woolworm:
         def process_image(input_file_path, output_file_path):
             img = Woolworm.load(input_file_path)
             img = Woolworm.deskew_with_hough(img)
-            img = Woolworm.remove_borders(img)
+            img = Woolworm.binarize_or_gray(img)
             Woolworm.save_image(img, output_file_path)
             return img
 

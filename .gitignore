@@ -30,3 +30,6 @@ outputs
 *.tiff
 hf-apollo
 .DS_Store
+
+# Ignore PPTX files
+*.pptx
