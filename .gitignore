@@ -31,5 +31,5 @@ outputs
 hf-apollo
 .DS_Store
 
-# Ignore .pptx files
+# Ignore PPTX files
 *.pptx
