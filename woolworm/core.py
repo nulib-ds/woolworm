@@ -239,7 +239,7 @@ class Woolworm:
             f"(threshold={entropy_threshold}) | components={len(sizes)}"
         )
 
-        return result
+        return result, decision
 
     @staticmethod
     def load(path, convert_if_jp2=True, out_format=".jpg", quality=90, cuda=False):
